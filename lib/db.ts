@@ -10,6 +10,10 @@ export const pool =
   new Pool({
     connectionString: process.env.DATABASE_URL,
     max: 5,
+    ssl:
+      process.env.DATABASE_SSL === "true"
+        ? { rejectUnauthorized: false }
+        : undefined,
   });
 
 if (process.env.NODE_ENV !== "production") globalThis._pgPool = pool;

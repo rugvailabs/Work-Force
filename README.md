@@ -16,11 +16,37 @@ built with Next.js, PostgreSQL and Tailwind CSS.
 ## Stack
 
 - Next.js (App Router, TypeScript, server actions)
-- PostgreSQL (hosted on Neon; any Postgres works — just change `DATABASE_URL`)
+- PostgreSQL — any Postgres server works; just set `DATABASE_URL`
 - Tailwind CSS v4 with a custom design system
 - `pg` with plain SQL — no ORM
 
 ## Running locally
+
+Start a local Postgres container (skip this if you already have a Postgres
+server to point at):
+
+```bash
+docker run --name org-directory-db \
+  -e POSTGRES_USER=orgdirectory \
+  -e POSTGRES_PASSWORD=orgdirectory \
+  -e POSTGRES_DB=orgdirectory \
+  -p 5432:5432 \
+  -d postgres:16
+```
+
+Copy `.env.example` to `.env.local` and fill in `SESSION_SECRET`. The default
+`DATABASE_URL` in `.env.example` matches the `docker run` command above.
+
+Create the tables on the brand new, empty database:
+
+```bash
+psql postgresql://orgdirectory:orgdirectory@localhost:5432/orgdirectory -f db/schema.sql
+```
+
+(Or `docker exec -i org-directory-db psql -U orgdirectory -d orgdirectory < db/schema.sql`
+if you don't have `psql` installed locally.)
+
+Then install dependencies and start the app:
 
 ```bash
 npm install
@@ -30,6 +56,8 @@ npm run dev
 Open http://localhost:3000. Configuration lives in `.env.local`:
 
 - `DATABASE_URL` — Postgres connection string
+- `DATABASE_SSL` — set to `true` to connect over SSL (most managed Postgres
+  providers need this); leave unset/`false` for a local container
 - `SESSION_SECRET` — random hex string used to sign admin session cookies
 
 ## Admin login
@@ -51,6 +79,8 @@ UPDATE admins SET password_hash = '<output>' WHERE username = 'admin';
 
 ## Database schema
 
+Defined in `db/schema.sql` (see "Running locally" above to apply it):
+
 - `departments` — department list
 - `employees` — one row per person; `status` is `pending` until approved;
   `reports_to_id` links to their manager, or `reports_to_name` holds a typed
@@ -62,6 +92,5 @@ UPDATE admins SET password_hash = '<output>' WHERE username = 'admin';
 Approving a person auto-links anyone who typed that person's name as their
 manager or work-giver.
 
-The database is seeded with ~16 sample employees (two of them pending) so every
-screen has realistic data. Delete them from the `employees` table when going
-live.
+`db/schema.sql` also seeds the default admin login above and a starting list
+of departments — edit or delete either before going live.
