@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env*
+*.tsbuildinfo
+Dockerfile
+docker-compose*.yml
+deploy
+README.md
+AGENTS.md

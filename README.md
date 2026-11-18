@@ -20,6 +20,12 @@ built with Next.js, PostgreSQL and Tailwind CSS.
 - Tailwind CSS v4 with a custom design system
 - `pg` with plain SQL — no ORM
 
+## Deploying to production
+
+See [`deploy/DEPLOY.md`](deploy/DEPLOY.md) — runs as a Docker Compose stack
+behind the shared Caddy on the SynergiTech server, serving
+`workforce.synergitech.co.in`.
+
 ## Running locally
 
 Start a local Postgres container (skip this if you already have a Postgres

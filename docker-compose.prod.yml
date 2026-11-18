@@ -1,0 +1,59 @@
+# Org directory — production stack for the shared SynergiTech server.
+#
+#   workforce.synergitech.co.in → this app (Next.js + its own PostgreSQL)
+#
+# Runs as its own compose stack, same arrangement as OPT-ATS and ATS India:
+# the app container also joins the shared external `workforce-edge` network so
+# the bench_time Caddy can reverse-proxy to it. Neither stack owns the other —
+# redeploying this app never touches BenchTime, and vice versa.
+# See deploy/DEPLOY.md for the full server + Caddy + DNS steps.
+#
+# Configure via a .env file (copy deploy/.env.example → .env and fill it in).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: workforce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orgdirectory
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: orgdirectory
+    volumes:
+      - workforce-pgdata:/var/lib/postgresql/data
+      # Runs automatically the first time the data volume is created:
+      # sets up tables, the default admin login and starter departments.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orgdirectory -d orgdirectory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: workforce-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://orgdirectory:${POSTGRES_PASSWORD}@postgres:5432/orgdirectory
+      # Local container Postgres has no SSL; DATABASE_SSL stays unset.
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      # `default` = this stack (reach postgres); `workforce-edge` is the shared
+      # network the bench_time Caddy joins to route workforce.<domain> here.
+      - default
+      - workforce-edge
+
+volumes:
+  workforce-pgdata:
+
+networks:
+  # Created once on the host: `docker network create workforce-edge`.
+  # External so neither project owns a network the other depends on.
+  workforce-edge:
+    external: true
