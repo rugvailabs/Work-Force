@@ -73,12 +73,22 @@ service's `networks:` add `- workforce-edge`, and under the top-level
     external: true
 ```
 
-Then recreate Caddy:
+Commit both edits — the compose change is what keeps the network attachment
+across future bench_time deploys (`auto-deploy.sh` / `up -d --build` recreate
+the caddy container from the compose file).
+
+Then activate **without recreating Caddy** — a live attach + graceful reload,
+so the four existing sites are never bounced (same zero-downtime approach the
+ATS India install used):
 
 ```bash
-cd /opt/bench_time
-docker compose -f docker-compose.prod.yml up -d caddy
+docker network connect workforce-edge benchtime-caddy
+docker exec benchtime-caddy caddy validate --config /etc/caddy/Caddyfile
+docker exec benchtime-caddy caddy reload --config /etc/caddy/Caddyfile
 ```
+
+(If `network connect` says the endpoint already exists, the running container
+already has the network — fine, continue with validate + reload.)
 
 ## 5. Point the domain (GoDaddy)
 
